@@ -9,7 +9,7 @@ import "package:js/js_util.dart";
 import "package:http/http.dart";
 
 bool isHEIC(Uint8List bytes) {
-  return String.fromCharCodes(bytes, 0, 16).contains("ftypheic");
+  return String.fromCharCodes(bytes, 0, 16).contains("ftyp");
 }
 
 Future<Uint8List> convertFromHEIC(Uint8List imageBytes) async {
