@@ -66,9 +66,9 @@ class _UploadedImageState extends State<_UploadedImage> {
                 Uint8List? imageBytes = await ImagePickerWeb.getImageAsBytes();
                 if (imageBytes == null) return; // User cancelled the popup
 
-                if (isHEIC(imageBytes)) {
+                if (Heic2Any.isHEIC(imageBytes)) {
                   print("Converting HEIC... ${String.fromCharCodes(imageBytes, 0, 16)}");
-                  imageBytes = await convertFromHEIC(imageBytes);
+                  imageBytes = await Heic2Any.convert(imageBytes);
                   print("Converted HEIC! ${String.fromCharCodes(imageBytes, 0, 16)}");
                 }
 

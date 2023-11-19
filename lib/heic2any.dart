@@ -8,30 +8,94 @@ import "package:js/js.dart";
 import "package:js/js_util.dart";
 import "package:http/http.dart";
 
-bool isHEIC(Uint8List bytes) {
-  return String.fromCharCodes(bytes, 0, 16).contains("ftyp");
+enum TargetType implements Comparable<TargetType> {
+  png(mimeType: "image/png"),
+  jpeg(mimeType: "image/jpeg"),
+  gif(mimeType: "image/gif");
+
+  final String mimeType;
+
+  const TargetType({required this.mimeType});
+
+  @override
+  int compareTo(TargetType other) => mimeType.compareTo(other.mimeType);
 }
 
-Future<Uint8List> convertFromHEIC(Uint8List imageBytes) async {
-  var heicBlob = Blob([imageBytes]);
-  var pngBlob = await _doTheThing(heicBlob);
-  Uint8List resultBytes = await bytesFromBlob(pngBlob);
-  return resultBytes;
+//TODO: Write documentation
+class Heic2Any {
+  static bool isHEIC(Uint8List bytes) {
+    return String.fromCharCodes(bytes, 0, 16).contains("ftyp");
+  }
+
+  static Future<Uint8List> convert(
+    Uint8List imageBytes, {
+    TargetType toType = TargetType.png,
+    double? jpegQuality,
+    double? gifInterval,
+  }) async {
+    assert(jpegQuality == null || (jpegQuality >= 0 && jpegQuality <= 1)); // if set, must be between 0 and 1
+
+    Blob heicBlob = Blob([imageBytes]);
+    Blob convBlob = await _useHeic2anySingle(heicBlob, toType, jpegQuality, gifInterval);
+    Uint8List resultBytes = await bytesFromBlob(convBlob);
+    return resultBytes;
+  }
+
+  static Future<Blob> _useHeic2anySingle(
+    Blob blob,
+    TargetType? toType,
+    double? jpegQuality,
+    double? gifInterval,
+  ) async {
+    var promise = _executeHeic2any(blob, false, toType?.mimeType, jpegQuality, gifInterval);
+    var qs = await promiseToFuture(promise);
+    return qs;
+  }
+
+  static Future<List<Uint8List>> convertIntoMultipleFrames(
+    Uint8List imageBytes, {
+    TargetType toType = TargetType.png,
+    double? jpegQuality,
+    double? gifInterval,
+  }) async {
+    assert(jpegQuality == null || (jpegQuality >= 0 && jpegQuality <= 1));
+
+    Blob heicBlob = Blob([imageBytes]);
+    List<dynamic> convBlobs = await _useHeic2anyMultiple(heicBlob, toType, jpegQuality, gifInterval);
+
+    //TODO: Replace this loop with a map() function:
+    List<Uint8List> resultsBytes = [];
+    for (Blob convBlob in convBlobs) {
+      resultsBytes.add(await bytesFromBlob(convBlob));
+    }
+
+    return resultsBytes;
+  }
+
+  static Future<dynamic> _useHeic2anyMultiple(
+    Blob blob,
+    TargetType? toType,
+    double? jpegQuality,
+    double? gifInterval,
+  ) async {
+    var promise = _executeHeic2any(blob, true, toType?.mimeType, jpegQuality, gifInterval);
+    var qs = await promiseToFuture(promise);
+    return qs;
+  }
+
+  static Future<Uint8List> bytesFromBlob(Blob pngBlob) async {
+    var objectUrl = Url.createObjectUrlFromBlob(pngBlob);
+    var resultBytes = await readBytes(Uri.parse(objectUrl));
+    Url.revokeObjectUrl(objectUrl);
+    return resultBytes;
+  }
 }
 
-@JS("useHeic2any")
-external dynamic _useHeic2any(Blob blob);
-
-Future<Blob> _doTheThing(Blob blob) async {
-  var promise = _useHeic2any(blob);
-  var qs = await promiseToFuture(promise);
-  return qs;
-}
-
-Future<Uint8List> bytesFromBlob(Blob pngBlob) async {
-  var objectUrl = Url.createObjectUrlFromBlob(pngBlob);
-  var resultBytes = await readBytes(Uri.parse(objectUrl));
-  Url.revokeObjectUrl(objectUrl);
-  return resultBytes;
-}
-
+@JS("executeHeic2any")
+external dynamic _executeHeic2any(
+  Blob blob,
+  bool? multiple,
+  String? toType,
+  double? quality,
+  double? gifInterval,
+);
