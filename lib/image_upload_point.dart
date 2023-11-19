@@ -2,7 +2,8 @@ import "dart:typed_data";
 
 import "package:flutter/material.dart";
 import "package:image_picker_web/image_picker_web.dart";
-import "package:heckofaheic/heckofaheic.dart" as hoh;
+
+import "heic2any.dart";
 
 const double imageSize = 300;
 
@@ -65,9 +66,10 @@ class _UploadedImageState extends State<_UploadedImage> {
                 Uint8List? imageBytes = await ImagePickerWeb.getImageAsBytes();
                 if (imageBytes == null) return; // User cancelled the popup
 
-                if (hoh.isHEIC(imageBytes)) {
-                  print("Converting HEIC...");
-                  imageBytes = await hoh.convertFromHEIC(imageBytes);
+                if (isHEIC(imageBytes)) {
+                  print("Converting HEIC... ${String.fromCharCodes(imageBytes, 0, 16)}");
+                  imageBytes = await convertFromHEIC(imageBytes);
+                  print("Converted HEIC! ${String.fromCharCodes(imageBytes, 0, 16)}");
                 }
 
                 setState(() {
