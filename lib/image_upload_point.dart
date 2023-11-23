@@ -1,7 +1,7 @@
 import "dart:typed_data";
 
 import "package:flutter/material.dart";
-import "package:image_picker_web/image_picker_web.dart";
+import "package:image_picker/image_picker.dart";
 
 import "heic2any.dart";
 
@@ -63,8 +63,14 @@ class _UploadedImageState extends State<_UploadedImage> {
                 });
               },
               onTap: () async {
-                Uint8List? imageBytes = await ImagePickerWeb.getImageAsBytes();
-                if (imageBytes == null) return; // User cancelled the popup
+                final ImagePicker picker = ImagePicker();
+                final XFile? pickedImage = await picker.pickImage(
+                  source: ImageSource.gallery,
+                  requestFullMetadata: false,
+                );
+                if (pickedImage == null) return; // User cancelled the popup
+
+                Uint8List imageBytes = await pickedImage.readAsBytes();
 
                 if (Heic2Any.isHEIC(imageBytes)) {
                   print("Converting HEIC... ${String.fromCharCodes(imageBytes, 0, 16)}");
